@@ -1,0 +1,9 @@
+pub const one = @import("1/day1.zig").one;
+pub const two = @import("2/day2.zig").two;
+pub const three = @import("3/day3.zig").three;
+pub const four = @import("4/day.zig").four;
+pub const five = @import("5/day.zig").five;
+pub const six = @import("6/day.zig").six;
+pub const seven = @import("7/day.zig").seven;
+pub const eight = @import("8/day.zig").eight;
+pub const nine = @import("9/day.zig").nine;
