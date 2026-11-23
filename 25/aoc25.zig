@@ -41,6 +41,7 @@ pub fn main(init:std.process.Init)!void{
             7 => try days.seven(commons),
             8 => try days.eight(commons),
             9 => try days.nine(commons),
+            10 => try days.ten(commons),
             else => return
         }
     }

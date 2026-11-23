@@ -7,3 +7,4 @@ pub const six = @import("6/day.zig").six;
 pub const seven = @import("7/day.zig").seven;
 pub const eight = @import("8/day.zig").eight;
 pub const nine = @import("9/day.zig").nine;
+pub const ten = @import("10/day.zig").ten;
