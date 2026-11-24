@@ -96,14 +96,14 @@ fn partTwo(lineItr:*help.StrIterator, common: *const help.CommonWrapper) !void{
     std.log.debug("result:{d}", .{result});
 }
 
+//todo another day another slow aah idea
 fn findMinimumJoltagePress(machine:*const Machine) !usize{
-    //go until press depth count
-    for(1..machine.lights.items.len)|count|{
+    //random limit for now
+    for(1..100)|count|{
         for(machine.buttons.items)|button|{
             machine.incJoltage(&button);
 
             if(recursiveJoltageUntil(machine, count, 1)) return count;
-
             machine.decJoltage(&button);
         }
     }
