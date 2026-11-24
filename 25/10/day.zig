@@ -36,6 +36,16 @@ const Machine = struct{
         }
         return true;
     }
+
+    fn press(machine:*const Machine, button:*const Button) void{
+        for(button.toggles.items)|toggle|{
+            machine.lights.items[toggle].state = !machine.lights.items[toggle].state;
+        }
+    }
+};
+
+const errs = error{
+    NotFound
 };
 
 fn partOne(lineItr:*help.StrIterator, common:*const help.CommonWrapper) !void{
@@ -46,35 +56,52 @@ fn partOne(lineItr:*help.StrIterator, common:*const help.CommonWrapper) !void{
 
     var result:usize = 0;
     for(machines.items)|machine|{
-        const fewestPresses = findMinimumPress(&machine);
+        const fewestPresses = try findMinimumPress(&machine);
         std.log.debug("minPress:{d}", .{fewestPresses});
         result += fewestPresses;
     }
     std.log.debug("result:{d}", .{result});
 }
 
-fn findMinimumPress(machine:*const Machine) usize{
-    for(1..machine.lights.items.len)|count|{
-        //try each button
+fn findMinimumPress(machine:*const Machine) !usize{
+    for(machine.buttons.items)|button|{
+        //try lights
+        machine.press(&button);
+
+        if(machine.isRunning()) return 1;
+        //reset press
+        machine.press(&button);
+    }
+
+    //go until press depth count
+    for(2..machine.lights.items.len)|count|{
         for(machine.buttons.items)|button|{
-            
-            //nested for until count, maybe recursion idk right now
+            machine.press(&button);
 
-            //toggle lights
-            for(button.toggles.items)|toggle|{
-                machine.lights.items[toggle].state = !machine.lights.items[toggle].state;
-            }
+            if(recursiveUntil(machine, count, 1)) return count;
 
-            if(machine.isRunning()) return count;
-            //reset lights
             machine.cleanState();
         }
     }
-
-    std.log.err("unable to find minpres:{}", .{machine.*});
-    return machine.lights.items.len;
+    
+    std.log.err("unable to finde min press for {}", .{machine});
+    return errs.NotFound;
 }
 
+fn recursiveUntil(machine:*const Machine, until:usize, current:usize) bool{
+    if(current + 1 > until) return false;
+
+    for(machine.buttons.items)|button|{
+        machine.press(&button);
+
+        if(machine.isRunning()) return true;
+        if(recursiveUntil(machine, until, current+1)) return true;
+
+        machine.press(&button);
+    }
+
+    return false;
+}
 
 fn createMachine(line:[]const u8, alloc:std.mem.Allocator) !Machine{
     var machine = Machine{};
