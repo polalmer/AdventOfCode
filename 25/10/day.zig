@@ -61,13 +61,12 @@ const Machine = struct{
         }
     }
 
-    fn checkJoltage(machine:*const Machine) JoltCheck{
-        var isRight = true;
-        for(machine.joltage.items)|joltage|{
-            if(joltage.state > joltage.goal) return JoltCheck.above;
-            if(joltage.state < joltage.goal) isRight = false;
+    fn canIncJoltage(machine:*const Machine, button:*const Button) bool{
+        for(button.toggles.items)|toggle|{
+            if(machine.joltage.items[toggle].state + 1 > machine.joltage.items[toggle].goal)
+                return false;
         }
-        return if(isRight) JoltCheck.goal else JoltCheck.below;
+        return true;
     }
 };
 
@@ -98,18 +97,29 @@ fn partTwo(lineItr:*help.StrIterator, common: *const help.CommonWrapper) !void{
 
 //todo another day another slow aah idea
 fn findMinimumJoltagePress(machine:*const Machine) !usize{
-    //random limit for now
     for(1..100)|count|{
-        for(machine.buttons.items)|button|{
-            machine.incJoltage(&button);
-
-            if(recursiveJoltageUntil(machine, count, 1)) return count;
-            machine.decJoltage(&button);
+        const button = getButton(machine);
+        if(button == null){
+            //revert the button press
+            //recursion
         }
+        machine.incJoltage(button);
+        
+        if(machine.isJolted()) return count;
+
     }
-    
-    std.log.err("unable to find min joltage press for {}", .{machine});
     return errs.NotFound;
+}
+
+fn getButton(machine:*const Machine) *?Button{
+    var button = null;
+    for(1..machine.buttons.items.len)|i|{
+        const checkButton = machine.buttons.items[i];
+        if(checkButton.toggles.items.len < button.toggles.items.len) continue;
+        if(!machine.canIncJoltage(&checkButton)) continue;
+        button = checkButton;
+    }
+    return button;
 }
 
 fn recursiveJoltageUntil(machine:*const Machine, until:usize, current:usize) bool{
