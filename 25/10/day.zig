@@ -68,12 +68,13 @@ const Machine = struct{
         }
         return true;
     }
-};
 
-const JoltCheck = enum{
-    below,
-    goal,
-    above
+    fn isJolted(machine:*const Machine)bool{
+        for(machine.joltage.items)|joltage|{
+            if(joltage.goal != joltage.state) return false;
+        }
+        return true;
+    }
 };
 
 const errs = error{
@@ -88,61 +89,40 @@ fn partTwo(lineItr:*help.StrIterator, common: *const help.CommonWrapper) !void{
 
     var result:usize = 0;
     for(machines.items)|machine|{
-        const fewestPresses = try findMinimumJoltagePress(&machine);
-        std.log.debug("joltPress:{d}", .{fewestPresses});
-        result += fewestPresses;
+        const fewestPresses = countJoltage(&machine, 1);
+        if(fewestPresses)|found|{
+            std.log.debug("joltPress:{d}", .{found});
+            result += found;
+        }
+        else{
+            std.log.err("Unable to find joltage presses {}", .{machine});
+            return;
+        }
     }
     std.log.debug("result:{d}", .{result});
 }
 
-//todo another day another slow aah idea
-fn findMinimumJoltagePress(machine:*const Machine) !usize{
-    for(1..100)|count|{
-        const button = getButton(machine);
-        if(button == null){
-            //revert the button press
-            //recursion
-        }
-        machine.incJoltage(button);
-        
+
+fn countJoltage(machine:*const Machine, count:usize) ?usize{
+    //buttons are ordered by how many things they toggle
+    for(machine.buttons.items)|button|{
+        if(!machine.canIncJoltage(&button)) continue;
+
+        //todo instead of adding one get the div and inc by the amount
+        machine.incJoltage(&button);
+        std.log.debug("pressed:{any}", .{button.toggles.items});
+
         if(machine.isJolted()) return count;
 
-    }
-    return errs.NotFound;
-}
+        const result = countJoltage(machine, count+1);
 
-fn getButton(machine:*const Machine) *?Button{
-    var button = null;
-    for(1..machine.buttons.items.len)|i|{
-        const checkButton = machine.buttons.items[i];
-        if(checkButton.toggles.items.len < button.toggles.items.len) continue;
-        if(!machine.canIncJoltage(&checkButton)) continue;
-        button = checkButton;
-    }
-    return button;
-}
+        if(result)|found| return found;
 
-fn recursiveJoltageUntil(machine:*const Machine, until:usize, current:usize) bool{
-    if(current + 1 > until) return false;
-
-    for(machine.buttons.items)|button|{
-        machine.incJoltage(&button);
-
-        const joltCheck = machine.checkJoltage();
-        if(joltCheck == JoltCheck.above){
-            machine.decJoltage(&button);
-            continue;
-        }
-        else if(joltCheck == JoltCheck.goal){
-            return true;
-        }
-
-        if(recursiveJoltageUntil(machine, until, current+1)) return true;
         machine.decJoltage(&button);
     }
-
-    return false;
+    return null;
 }
+
 
 fn partOne(lineItr:*help.StrIterator, common:*const help.CommonWrapper) !void{
     var machines:std.ArrayList(Machine) = .empty;
@@ -180,7 +160,7 @@ fn findMinimumPress(machine:*const Machine) !usize{
             machine.cleanLights();
         }
     }
-    
+
     std.log.err("unable to finde min press for {}", .{machine});
     return errs.NotFound;
 }
@@ -206,12 +186,22 @@ fn createMachine(line:[]const u8, alloc:std.mem.Allocator) !Machine{
         switch(line[i]){
             '.' => try machine.lights.append(alloc, Light{.goal = false}),
             '#' => try machine.lights.append(alloc, Light{.goal = true}),
-            '(' => try machine.buttons.append(alloc, try createButton(line, i+1, alloc)),
+            //order buttons
+            '(' => try insertButton(&machine, alloc, try createButton(line, i+1, alloc)),
             '{' => try readJoltage(alloc, &machine, line, i+1),
             else => continue
         }
     }
     return machine;
+}
+
+fn insertButton(machine: *Machine, alloc:std.mem.Allocator, button:Button) !void{
+    for(0..machine.buttons.items.len)|i|{
+        if(machine.buttons.items[i].toggles.items.len > button.toggles.items.len) continue;
+        try machine.buttons.insert(alloc, i, button);
+        return;
+    }
+    try machine.buttons.append(alloc, button);
 }
 
 fn readJoltage(alloc:std.mem.Allocator, machine:*Machine, line:[]const u8, start:usize)!void{
